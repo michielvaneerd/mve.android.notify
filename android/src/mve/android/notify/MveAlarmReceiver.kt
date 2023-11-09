@@ -15,15 +15,12 @@ import org.appcelerator.titanium.util.TiRHelper
 
 class MveAlarmReceiver : BroadcastReceiver() {
 
-    companion object {
-        private const val LCAT = "MveAndroidNotifyModule"
-    }
-
     override fun onReceive(context: Context?, intent: Intent?) {
-        Log.d(LCAT, "Alarm received!")
+
+        Utils.log("Alarm received")
 
         if (intent == null) {
-            Log.d(LCAT, "Maar geen intent, dus doe nmiets..");
+            Utils.log("No intent in alarm, so we cannot display a notification")
             return;
         }
 
@@ -32,8 +29,6 @@ class MveAlarmReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_TITLE)
         val icon = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_ICON)
 
-        Log.d(LCAT, "Schedule for $icon, $title, $content and $requestCode")
-
         val builder = NotificationCompat.Builder(TiApplication.getInstance().applicationContext, channelId)
             .setSmallIcon(TiRHelper.getApplicationResource("drawable.$icon"))
             .setContentIntent(createIntent(requestCode))
@@ -41,24 +36,20 @@ class MveAlarmReceiver : BroadcastReceiver() {
             .setContentText(content)
             .setAutoCancel(true)
 
-        Log.d(LCAT, "Build notification OK!")
-
         if (ActivityCompat.checkSelfPermission(
                 TiApplication.getInstance().applicationContext,
                 Manifest.permission.POST_NOTIFICATIONS
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             NotificationManagerCompat.from(TiApplication.getInstance()).notify(requestCode, builder.build())
-            Log.d(LCAT, "Now displaying the notification!")
+            Utils.log("Notification displayed")
         } else {
-            Log.d(LCAT, "No permission to display notification...")
+            Utils.log("We have no permission to display a notification")
         }
     }
 
     private fun createIntent(requestCode: Int) : PendingIntent
     {
-        //val launchIntent = TiApplication.getInstance().applicationContext.packageManager.getLaunchIntentForPackage(TiApplication.getInstance().applicationContext.packageName)
-        //return PendingIntent.getActivity(TiApplication.getInstance().applicationContext, 1, launchIntent,   PendingIntent.FLAG_IMMUTABLE);
         val launchIntent = TiApplication.getInstance().applicationContext.packageManager
             .getLaunchIntentForPackage(TiApplication.getInstance().applicationContext.packageName)
         if (launchIntent != null) {
@@ -66,7 +57,7 @@ class MveAlarmReceiver : BroadcastReceiver() {
             launchIntent.addCategory(Intent.CATEGORY_LAUNCHER)
             launchIntent.action = Intent.ACTION_MAIN
         }
-        return PendingIntent.getActivity(TiApplication.getInstance().applicationContext, 1,
+        return PendingIntent.getActivity(TiApplication.getInstance().applicationContext, requestCode,
             launchIntent!!, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE) as PendingIntent
     }
 

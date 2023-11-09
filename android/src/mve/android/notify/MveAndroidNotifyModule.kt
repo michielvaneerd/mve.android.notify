@@ -16,22 +16,20 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.icu.util.Calendar
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import org.appcelerator.kroll.KrollModule
 import org.appcelerator.kroll.KrollDict
 import org.appcelerator.kroll.annotations.Kroll
 import org.appcelerator.kroll.common.Log
 import org.appcelerator.kroll.common.TiConfig
 import org.appcelerator.titanium.TiApplication
-import org.appcelerator.titanium.util.TiRHelper
+import java.text.SimpleDateFormat
 
 const val channelId = "channel";
+val DBG = TiConfig.LOGD
+const val LCAT = "MveAndroidNotifyModule"
 
 @Kroll.module(name = "MveAndroidNotify", id = "mve.android.notify")
 class MveAndroidNotifyModule: KrollModule() {
@@ -42,29 +40,32 @@ class MveAndroidNotifyModule: KrollModule() {
 	//   3. Start developing! All dependencies and code completions are supported!
 
 	companion object {
-		// Standard Debugging variables
-		private const val LCAT = "MveAndroidNotifyModule"
-		private val DBG = TiConfig.LOGD
 
 		const val NOTIFICATION_REQUEST_CODE = "requestCode"
 		const val NOTIFICATION_CONTENT = "content"
 		const val NOTIFICATION_TITLE = "title"
 		const val NOTIFICATION_ICON = "icon"
+		const val NOTIFICATION_HOUR = "hour"
+		const val NOTIFICATION_MINUTE = "minute"
+		const val NOTIFICATION_INTERVAL = "interval"
+		const val NOTIFICATION_INTERVAL_DAILY = "daily"
+		const val NOTIFICATION_INTERVAL_WEEKLY = "weekly"
+		const val NOTIFICATION_INTERVAL_4_WEEKLY = "4weekly"
+
 		
 		// You can define constants with @Kroll.constant, for example:
 		// @Kroll.constant private val EXTERNAL_NAME = "EXTERNAL_NAME"
 
 		@Kroll.onAppCreate
 		fun onAppCreate(app: TiApplication?) {
-			Log.d(LCAT, "inside onAppCreate")
-			// put module init code that needs to run when the application is created
+
 		}
 	}
 
 	@Kroll.method
 	fun createChannel() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-			Log.d(LCAT, "Creating channel")
+			Utils.log("Create notification channel")
 			val name: CharSequence = "default";
 			val notificationChannel = NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_DEFAULT)
 			val notificationManager = TiApplication.getInstance().applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -72,57 +73,23 @@ class MveAndroidNotifyModule: KrollModule() {
 		}
 	}
 
-//	@Kroll.method
-//	fun showNotification() {
-//		android.util.Log.d(LCAT, "Build notification!")
-//		val builder = NotificationCompat.Builder(TiApplication.getInstance().applicationContext, channelId)
-//			.setSmallIcon(TiRHelper.getApplicationResource("drawable.ic_stat_capsules_solid"))
-//			.setContentTitle("Dit is een title!")
-//			.setContentText("Dit is de content!")
-//			.setContentIntent(createIntent())
-//			.setAutoCancel(true)
-//		android.util.Log.d(LCAT, "Build notification OK!")
-//		if (ActivityCompat.checkSelfPermission(
-//				TiApplication.getInstance().applicationContext,
-//				Manifest.permission.POST_NOTIFICATIONS
-//			) != PackageManager.PERMISSION_GRANTED
-//		) {
-//			android.util.Log.d(LCAT, "No permission...")
-//			// TODO: Consider calling
-//			//    ActivityCompat#requestPermissions
-//			// here to request the missing permissions, and then overriding
-//			//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//			//                                          int[] grantResults)
-//			// to handle the case where the user grants the permission. See the documentation
-//			// for ActivityCompat#requestPermissions for more details.
-//			return
-//		}
-//		NotificationManagerCompat.from(TiApplication.getInstance()).notify(1, builder.build())
-//		android.util.Log.d(LCAT, "You should see a notification!!")
-//
-//	}
-
-	private fun createIntent() : PendingIntent
-	{
-		//val launchIntent = TiApplication.getInstance().applicationContext.packageManager.getLaunchIntentForPackage(TiApplication.getInstance().applicationContext.packageName)
-		//return PendingIntent.getActivity(TiApplication.getInstance().applicationContext, 1, launchIntent,   PendingIntent.FLAG_IMMUTABLE);
-		val launchIntent = TiApplication.getInstance().applicationContext.packageManager
-			.getLaunchIntentForPackage(TiApplication.getInstance().applicationContext.packageName)
-		if (launchIntent != null) {
-			launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-			launchIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-			launchIntent.action = Intent.ACTION_MAIN
-		}
-		return PendingIntent.getActivity(TiApplication.getInstance().applicationContext, 1,
-			launchIntent!!, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE) as PendingIntent
-	}
-
 	@RequiresApi(Build.VERSION_CODES.N)
 	@Kroll.method
-	fun schedule(title: String, content: String, hour: Int, minute: Int, requestCode: Int, icon: String) {
+	fun schedule(arg: KrollDict) {
 
-		// MOet gedaan worden door de Ti app!
-		//createChannel()
+		val requestCode = arg.getInt(NOTIFICATION_REQUEST_CODE)
+		val title = arg.getString(NOTIFICATION_TITLE)
+		val content = arg.getString(NOTIFICATION_CONTENT)
+		val icon = arg.getString(NOTIFICATION_ICON)
+		val hour = arg.getInt(NOTIFICATION_HOUR)
+		val minute = arg.getInt(NOTIFICATION_MINUTE)
+		val intervalInMs = when (arg.getString(NOTIFICATION_INTERVAL)) {
+			NOTIFICATION_INTERVAL_WEEKLY -> AlarmManager.INTERVAL_DAY * 7
+			NOTIFICATION_INTERVAL_4_WEEKLY -> AlarmManager.INTERVAL_DAY * 28
+			else -> AlarmManager.INTERVAL_DAY
+		}
+
+		Utils.log("Going to schedule notification for requestCode $requestCode")
 
 		val context = TiApplication.getInstance().applicationContext;
 
@@ -132,47 +99,19 @@ class MveAndroidNotifyModule: KrollModule() {
 		infoIntent.putExtra(NOTIFICATION_TITLE, title)
 		infoIntent.putExtra(NOTIFICATION_ICON, icon)
 
-		Log.d(LCAT, "Scheduling for $content and code = $requestCode")
-
 		val calendar: Calendar = Calendar.getInstance().apply {
-			timeInMillis = System.currentTimeMillis() + 5000 // dus 5 seconden na nu inplannen
-			//set(Calendar.HOUR_OF_DAY, 16)
+			timeInMillis = System.currentTimeMillis()
+			set(Calendar.HOUR_OF_DAY, hour)
+			set(Calendar.MINUTE, minute)
 		}
 
 		var alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
 		var pendingIntent = PendingIntent.getBroadcast(context, requestCode, infoIntent,
 			PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, AlarmManager.INTERVAL_DAY, pendingIntent)
+		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
 
-		Log.d(LCAT, "Method schedule() called with $title and $content and requestCode = $requestCode and hour $hour and $minute op ${calendar.get(Calendar.HOUR_OF_DAY)}:${calendar.get(Calendar.MINUTE)}!")
+		val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+		Utils.log("Scheduled notification for requestCode $requestCode starting on ${formatter.format(calendar.time)}")
 	}
-	
-//	@Kroll.method
-//	fun testMethod(params: KrollDict) {
-//		Log.d(LCAT, "testMethod() called")
-//
-//		// Access the parameters passed as an Object, e.g. "myModule.testMethod({ name: 'John Doe', flag: true })"
-//		val name = params.getString("name")
-//		val flag = params.optBoolean("flag", false)
-//
-//		// Fire an event that can be added via "myModule.addEventListener('shown', ...)"
-//		val event = KrollDict()
-//		event["name"] = name
-//		event["flag"] = flag
-//
-//		fireEvent("", event)
-//	}
-
-	// Properties
-
-//	@get:Kroll.getProperty
-//	@set:Kroll.setProperty
-//	var exampleProp: String
-//		get() {
-//			Log.d(LCAT, "get example property")
-//			return "hello world"
-//		}
-//		set(value) {
-//			Log.d(LCAT, "set example property: $value")
-//		}
 }
