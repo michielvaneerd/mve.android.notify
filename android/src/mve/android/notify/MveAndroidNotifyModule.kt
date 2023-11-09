@@ -9,7 +9,6 @@
 
 package mve.android.notify
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -22,7 +21,6 @@ import androidx.annotation.RequiresApi
 import org.appcelerator.kroll.KrollModule
 import org.appcelerator.kroll.KrollDict
 import org.appcelerator.kroll.annotations.Kroll
-import org.appcelerator.kroll.common.Log
 import org.appcelerator.kroll.common.TiConfig
 import org.appcelerator.titanium.TiApplication
 import java.text.SimpleDateFormat
@@ -51,7 +49,7 @@ class MveAndroidNotifyModule: KrollModule() {
 		const val NOTIFICATION_INTERVAL_DAILY = "daily"
 		const val NOTIFICATION_INTERVAL_WEEKLY = "weekly"
 		const val NOTIFICATION_INTERVAL_4_WEEKLY = "4weekly"
-		// const val NOTIFICATION_EXACT = "exact"
+		//const val NOTIFICATION_EXACT = "exact"
 
 		
 		// You can define constants with @Kroll.constant, for example:
@@ -90,7 +88,7 @@ class MveAndroidNotifyModule: KrollModule() {
 			NOTIFICATION_INTERVAL_4_WEEKLY -> AlarmManager.INTERVAL_DAY * 28
 			else -> AlarmManager.INTERVAL_DAY
 		}
-		// val isExact = arg.getBoolean(NOTIFICATION_EXACT)
+		//val isExact = arg.getBoolean(NOTIFICATION_EXACT)
 
 		//if (isExact) {
 		//	Utils.log("Going to schedule an EXACT notification for requestCode $requestCode")
@@ -115,11 +113,7 @@ class MveAndroidNotifyModule: KrollModule() {
 		var alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
 		var pendingIntent = PendingIntent.getBroadcast(context, requestCode, infoIntent,
 			PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-		//if (isExact) {
-		//	alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
-		//} else {
-			alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
-		//}
+		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
 
 		val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
