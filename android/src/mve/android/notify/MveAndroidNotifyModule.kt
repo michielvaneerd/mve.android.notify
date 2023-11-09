@@ -51,6 +51,7 @@ class MveAndroidNotifyModule: KrollModule() {
 		const val NOTIFICATION_INTERVAL_DAILY = "daily"
 		const val NOTIFICATION_INTERVAL_WEEKLY = "weekly"
 		const val NOTIFICATION_INTERVAL_4_WEEKLY = "4weekly"
+		// const val NOTIFICATION_EXACT = "exact"
 
 		
 		// You can define constants with @Kroll.constant, for example:
@@ -83,13 +84,19 @@ class MveAndroidNotifyModule: KrollModule() {
 		val icon = arg.getString(NOTIFICATION_ICON)
 		val hour = arg.getInt(NOTIFICATION_HOUR)
 		val minute = arg.getInt(NOTIFICATION_MINUTE)
-		val intervalInMs = when (arg.getString(NOTIFICATION_INTERVAL)) {
+		val interval = arg.getString(NOTIFICATION_INTERVAL)
+		val intervalInMs = when (interval) {
 			NOTIFICATION_INTERVAL_WEEKLY -> AlarmManager.INTERVAL_DAY * 7
 			NOTIFICATION_INTERVAL_4_WEEKLY -> AlarmManager.INTERVAL_DAY * 28
 			else -> AlarmManager.INTERVAL_DAY
 		}
+		// val isExact = arg.getBoolean(NOTIFICATION_EXACT)
 
-		Utils.log("Going to schedule notification for requestCode $requestCode")
+		//if (isExact) {
+		//	Utils.log("Going to schedule an EXACT notification for requestCode $requestCode")
+		//} else {
+			Utils.log("Going to schedule an INEXACT $interval notification for requestCode $requestCode")
+		//}
 
 		val context = TiApplication.getInstance().applicationContext;
 
@@ -108,7 +115,11 @@ class MveAndroidNotifyModule: KrollModule() {
 		var alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
 		var pendingIntent = PendingIntent.getBroadcast(context, requestCode, infoIntent,
 			PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-		alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
+		//if (isExact) {
+		//	alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
+		//} else {
+			alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
+		//}
 
 		val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
