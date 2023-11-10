@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ti:app xmlns:ti="http://ti.appcelerator.org">
+	<id>mve.android.notify.app</id>
+	<name>MveAndroidNotifyExampleApp</name>
+	<version>1.0</version>
+	<publisher>not specified</publisher>
+	<url/>
+	<description/>
+	<copyright>not specified</copyright>
+	<icon>appicon.png</icon>
+	<fullscreen>false</fullscreen>
+	<navbar-hidden>false</navbar-hidden>
+	<guid>6730b0b9-0b4c-49e3-a037-2c220df9595f</guid>
+	<property name="ti.ui.defaultunit" type="string">dp</property>
+	<property name="run-on-main-thread" type="bool">true</property>
+	<!-- Enabling ti.android.debug makes the debug log from the module visible -->
+	<property name="ti.android.debug" type="bool">true</property>
+	<ios>
+		<enable-launch-screen-storyboard>true</enable-launch-screen-storyboard>
+		<use-app-thinning>true</use-app-thinning>
+		<plist>
+			<dict>
+				<key>UISupportedInterfaceOrientations~iphone</key>
+				<array>
+					<string>UIInterfaceOrientationPortrait</string>
+				</array>
+				<key>UISupportedInterfaceOrientations~ipad</key>
+				<array>
+					<string>UIInterfaceOrientationPortrait</string>
+					<string>UIInterfaceOrientationPortraitUpsideDown</string>
+					<string>UIInterfaceOrientationLandscapeLeft</string>
+					<string>UIInterfaceOrientationLandscapeRight</string>
+				</array>
+				<key>UIRequiresPersistentWiFi</key>
+				<false/>
+				<key>UIPrerenderedIcon</key>
+				<false/>
+				<key>UIStatusBarHidden</key>
+				<false/>
+				<key>UIStatusBarStyle</key>
+				<string>UIStatusBarStyleDefault</string>
+			</dict>
+		</plist>
+	</ios>
+	<android xmlns:android="http://schemas.android.com/apk/res/android">
+		<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1">
+			<!-- START mve.android.notify -->
+			<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+			<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+			<application>
+                <receiver android:name="mve.android.notify.MveAlarmReceiver" />
+            </application>
+			<!-- END mve.android.notify -->
+		</manifest>
+	</android>
+	<modules>
+		<module version="1.0.0" platform="android">mve.android.notify</module>
+	</modules>
+	<deployment-targets>
+		<target device="android">true</target>
+		<target device="ipad">false</target>
+		<target device="iphone">false</target>
+	</deployment-targets>
+	<sdk-version>12.2.1.GA</sdk-version>
+<plugins><plugin version="1.0">ti.alloy</plugin>
+</plugins>
+</ti:app>

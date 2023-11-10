@@ -1,0 +1,44 @@
+<Alloy>
+	<Window class="container" layout="vertical">
+		
+		<Label top="10">One-time exact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleOnceExact">Schedule</Button>
+			<Button left="10" onClick="cancelOnceExact">Cancel</Button>
+		</View>
+
+		<Label top="10">Hourly exact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleHourlyExact">Schedule</Button>
+			<Button left="10" onClick="cancelHourlyExact">Cancel</Button>
+		</View>
+
+		<Label top="10">Daily exact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleDailyExact">Schedule</Button>
+			<Button left="10" onClick="cancelDailyExact">Cancel</Button>
+		</View>
+
+		<Label top="10">One-time inexact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleOnceInexact">Schedule</Button>
+			<Button left="10" onClick="cancelOnceInexact">Cancel</Button>
+		</View>
+
+		<Label top="10">Hourly inexact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleHourlyInexact">Schedule</Button>
+			<Button left="10" onClick="cancelHourlyInexact">Cancel</Button>
+		</View>
+
+		<Label top="10">Daily inexact notification</Label>
+		<View layout="horizontal" height="Ti.UI.SIZE" width="Ti.UI.SIZE">
+			<Button onClick="scheduleDailyInexact">Schedule</Button>
+			<Button left="10" onClick="cancelDailyInexact">Cancel</Button>
+		</View>
+
+		<Label top="10" id="postPermission"></Label>
+		<Label top="10" id="exactPermission"></Label>
+
+	</Window>
+</Alloy>
