@@ -17,7 +17,6 @@ import android.content.Context
 import android.content.Intent
 import java.util.Calendar
 import android.os.Build
-import androidx.annotation.RequiresApi
 import org.appcelerator.kroll.KrollModule
 import org.appcelerator.kroll.KrollDict
 import org.appcelerator.kroll.annotations.Kroll
@@ -47,38 +46,115 @@ class MveAndroidNotifyModule: KrollModule() {
 		const val NOTIFICATION_MINUTE = "minute"
 		const val NOTIFICATION_INTERVAL = "interval"
 		const val NOTIFICATION_INTERVAL_ONCE = "once"
-		const val NOTIFICATION_INTERVAL_FIFTEEN_MINUTES = "15_min"
-		const val NOTIFICATION_INTERVAL_HALF_HOUR = "half_hour"
-		const val NOTIFICATION_INTERVAL_HOUR = "hour"
-		const val NOTIFICATION_INTERVAL_DAY = "day"
-		const val NOTIFICATION_INTERVAL_WEEK = "week"
-		const val NOTIFICATION_INTERVAL_4_WEEK = "4_week"
-		const val NOTIFICATION_EXACT = "exact"
-
-		
-		// You can define constants with @Kroll.constant, for example:
-		// @Kroll.constant private val EXTERNAL_NAME = "EXTERNAL_NAME"
+		private const val NOTIFICATION_INTERVAL_FIFTEEN_MINUTES = "15_min"
+		private const val NOTIFICATION_INTERVAL_HALF_HOUR = "half_hour"
+		private const val NOTIFICATION_INTERVAL_HOUR = "hour"
+		private const val NOTIFICATION_INTERVAL_DAY = "day"
+		private const val NOTIFICATION_INTERVAL_WEEK = "week"
+		private const val NOTIFICATION_INTERVAL_4_WEEK = "4_week"
+		private const val NOTIFICATION_EXACT = "exact"
 
 		@Kroll.onAppCreate
 		fun onAppCreate(app: TiApplication?) {
 
 		}
 
+		// Static functions that we may also need in the AlarmReceiver if we have exact repeating alarms.
+		fun getReceiverIntent(): Intent {
+			return Intent(TiApplication.getInstance().applicationContext, MveAlarmReceiver::class.java)
+		}
 
+		fun getPendingIntent(requestCode: Int, intent: Intent): PendingIntent {
+			return PendingIntent.getBroadcast(TiApplication.getInstance().applicationContext, requestCode, intent,
+				PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+		}
+
+		private fun getContext(): Context {
+			return TiApplication.getInstance().applicationContext;
+		}
+
+		private fun intervalToMs(interval: String): Long {
+			return when (interval) {
+				NOTIFICATION_INTERVAL_FIFTEEN_MINUTES -> AlarmManager.INTERVAL_FIFTEEN_MINUTES
+				NOTIFICATION_INTERVAL_HALF_HOUR -> AlarmManager.INTERVAL_HALF_HOUR
+				NOTIFICATION_INTERVAL_HOUR -> AlarmManager.INTERVAL_HOUR
+				NOTIFICATION_INTERVAL_DAY -> AlarmManager.INTERVAL_DAY
+				NOTIFICATION_INTERVAL_WEEK -> AlarmManager.INTERVAL_DAY * 7
+				NOTIFICATION_INTERVAL_4_WEEK -> AlarmManager.INTERVAL_DAY * 28
+				else -> 0L
+			}
+		}
+
+		fun scheduleNotification(requestCode: Int, content: String, title: String, icon: String, interval: String, isExact: Boolean, hour: Int, minute: Int, fromReceiver: Boolean) {
+
+			val context = getContext()
+
+			var infoIntent = getReceiverIntent();
+			infoIntent.putExtra(NOTIFICATION_REQUEST_CODE, requestCode)
+			infoIntent.putExtra(NOTIFICATION_CONTENT, content)
+			infoIntent.putExtra(NOTIFICATION_TITLE, title)
+			infoIntent.putExtra(NOTIFICATION_ICON, icon)
+			infoIntent.putExtra(NOTIFICATION_INTERVAL, interval)
+			infoIntent.putExtra(NOTIFICATION_EXACT, isExact)
+			infoIntent.putExtra(NOTIFICATION_HOUR, hour)
+			infoIntent.putExtra(NOTIFICATION_MINUTE, minute)
+
+			var calendar = Calendar.getInstance().apply {
+				timeInMillis = System.currentTimeMillis()
+			};
+
+			val intervalInMs = intervalToMs(interval)
+
+			if (!fromReceiver) {
+				// The first time we schedule this, so set hour and minute
+				calendar.set(Calendar.HOUR_OF_DAY, hour)
+				calendar.set(Calendar.MINUTE, minute)
+			} else {
+				// From receiver, so we are rescheduling an exact repeating notification, so add the interval to this time
+				when (interval) {
+					NOTIFICATION_INTERVAL_FIFTEEN_MINUTES -> calendar.add(Calendar.MINUTE, 15)
+					NOTIFICATION_INTERVAL_HALF_HOUR -> calendar.add(Calendar.MINUTE, 30)
+					NOTIFICATION_INTERVAL_HOUR -> calendar.add(Calendar.MINUTE, 60)
+					NOTIFICATION_INTERVAL_DAY -> calendar.add(Calendar.DAY_OF_MONTH, 1)
+					NOTIFICATION_INTERVAL_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 7)
+					NOTIFICATION_INTERVAL_4_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 28)
+				}
+			}
+
+			val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
+			var pendingIntent = getPendingIntent(requestCode, infoIntent)
+
+			if (isExact) {
+				// setRepeating doesn't work exact, you have to schedule one exact with setExact() and then reschedule the next one in the alarm receiver.
+				// https://stackoverflow.com/a/59473739/1294832
+				alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+			} else {
+				if (interval == NOTIFICATION_INTERVAL_ONCE) {
+					alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+				} else {
+					alarmManager.setInexactRepeating(
+						AlarmManager.RTC_WAKEUP,
+						calendar.timeInMillis,
+						intervalInMs,
+						pendingIntent
+					)
+				}
+			}
+
+			Utils.log("Scheduled $interval " + (if(isExact) " exact " else " inexact ") + " notification with id $requestCode starting on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.time)}")
+		}
 	}
 
+	// Public instance functions that can be called from the Titanium app
 	@Kroll.method
 	fun createChannel() {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			Utils.log("Create notification channel")
 			val name: CharSequence = "default";
-			val notificationChannel = NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_DEFAULT)
 			val notificationManager = TiApplication.getInstance().applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-			notificationManager.createNotificationChannel(notificationChannel)
+			notificationManager.createNotificationChannel(NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_DEFAULT))
 		}
 	}
-
-
 
 	@Kroll.method
 	fun cancel(requestCode: Int) {
@@ -90,6 +166,7 @@ class MveAndroidNotifyModule: KrollModule() {
 	@Kroll.method
 	fun schedule(arg: KrollDict) {
 
+		// From KrollDict to properties
 		val requestCode = arg.getInt(NOTIFICATION_REQUEST_CODE)
 		val title = arg.getString(NOTIFICATION_TITLE)
 		val content = arg.getString(NOTIFICATION_CONTENT)
@@ -97,62 +174,10 @@ class MveAndroidNotifyModule: KrollModule() {
 		val hour = arg.getInt(NOTIFICATION_HOUR)
 		val minute = arg.getInt(NOTIFICATION_MINUTE)
 		val interval = if (arg.containsKeyAndNotNull(NOTIFICATION_INTERVAL)) arg.getString(NOTIFICATION_INTERVAL) else NOTIFICATION_INTERVAL_ONCE
-
-		val intervalInMs = when (interval) {
-			NOTIFICATION_INTERVAL_FIFTEEN_MINUTES -> AlarmManager.INTERVAL_FIFTEEN_MINUTES
-			NOTIFICATION_INTERVAL_HALF_HOUR -> AlarmManager.INTERVAL_HALF_HOUR
-			NOTIFICATION_INTERVAL_HOUR -> AlarmManager.INTERVAL_HOUR
-			NOTIFICATION_INTERVAL_DAY -> AlarmManager.INTERVAL_DAY
-			NOTIFICATION_INTERVAL_WEEK -> AlarmManager.INTERVAL_DAY * 7
-			NOTIFICATION_INTERVAL_4_WEEK -> AlarmManager.INTERVAL_DAY * 28
-			else -> 0L
-		}
 		val isExact = arg.getBoolean(NOTIFICATION_EXACT)
 
-		val context = TiApplication.getInstance().applicationContext;
+		scheduleNotification(requestCode, content, title, icon, interval, isExact, hour, minute, false)
 
-		var infoIntent = getReceiverIntent();
-		infoIntent.putExtra(NOTIFICATION_REQUEST_CODE, requestCode)
-		infoIntent.putExtra(NOTIFICATION_CONTENT, content)
-		infoIntent.putExtra(NOTIFICATION_TITLE, title)
-		infoIntent.putExtra(NOTIFICATION_ICON, icon)
-		infoIntent.putExtra(NOTIFICATION_INTERVAL, interval)
-		infoIntent.putExtra(NOTIFICATION_EXACT, isExact)
-		infoIntent.putExtra(NOTIFICATION_HOUR, hour)
-		infoIntent.putExtra(NOTIFICATION_MINUTE, minute)
-
-		val calendar: Calendar = Calendar.getInstance().apply {
-			timeInMillis = System.currentTimeMillis()
-			set(Calendar.HOUR_OF_DAY, hour)
-			set(Calendar.MINUTE, minute)
-		}
-
-		val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
-		var pendingIntent = getPendingIntent(requestCode, infoIntent)
-
-		// setRepeating doesn't work exact, you have to schedule one exact with setExact() and then reschedule the next one in the alarm receiver.
-		// https://stackoverflow.com/a/59473739/1294832
-
-		if (isExact) {
-			if (interval == NOTIFICATION_INTERVAL_ONCE) {
-				alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-			} else {
-				alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, intervalInMs, pendingIntent)
-			}
-		} else {
-			if (interval == NOTIFICATION_INTERVAL_ONCE) {
-				alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
-			} else {
-				alarmManager.setInexactRepeating(
-					AlarmManager.RTC_WAKEUP,
-					calendar.timeInMillis,
-					intervalInMs,
-					pendingIntent
-				)
-			}
-		}
-
-		Utils.log("Scheduled $interval " + (if(isExact) " exact " else " inexact ") + " notification with id $requestCode starting on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.time)}")
 	}
 
 	@Kroll.method
@@ -161,12 +186,7 @@ class MveAndroidNotifyModule: KrollModule() {
 		return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) alarmManager.canScheduleExactAlarms() else true;
 	}
 
-	private fun getReceiverIntent(): Intent {
-		return Intent(TiApplication.getInstance().applicationContext, MveAlarmReceiver::class.java)
-	}
 
-	private fun getPendingIntent(requestCode: Int, intent: Intent): PendingIntent {
-		return PendingIntent.getBroadcast(TiApplication.getInstance().applicationContext, requestCode, intent,
-			PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-	}
+
+
 }

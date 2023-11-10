@@ -30,6 +30,7 @@ class MveAlarmReceiver : BroadcastReceiver() {
         val content = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_CONTENT)
         val title = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_TITLE)
         val icon = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_ICON)
+        val isExact = intent.getBooleanExtra(MveAndroidNotifyModule.NOTIFICATION_EXACT, false)
 
         val builder = NotificationCompat.Builder(TiApplication.getInstance().applicationContext, channelId)
             .setSmallIcon(TiRHelper.getApplicationResource("drawable.$icon"))
@@ -48,6 +49,18 @@ class MveAlarmReceiver : BroadcastReceiver() {
         } else {
             Utils.log("We have no permission to display a notification")
         }
+
+        if (isExact) {
+            val interval = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_INTERVAL);
+            if (interval != MveAndroidNotifyModule.NOTIFICATION_INTERVAL_ONCE) {
+                // setRepeating doesn't work exact, you have to schedule one exact with setExact() and then reschedule the next one in the alarm receiver.
+                // https://stackoverflow.com/a/59473739/1294832
+                val hour = intent.getIntExtra(MveAndroidNotifyModule.NOTIFICATION_HOUR, 0)
+                val minute = intent.getIntExtra(MveAndroidNotifyModule.NOTIFICATION_MINUTE, 0)
+                MveAndroidNotifyModule.scheduleNotification(requestCode, content!!, title!!, icon!!, interval!!, true, hour, minute, true)
+            }
+        }
+
     }
 
     private fun createIntent(requestCode: Int) : PendingIntent
