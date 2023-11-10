@@ -10,6 +10,20 @@ A Titanium Android module that can be used to schedule local notifications. See 
 - Each notification can be scheduled once or in a repeated interval.
 - Each notification has a `requestCode` - this is a number and works as an ID for the notification. This must be used to cancel a notification.
 
+## Changes to tiapp.xml
+
+Add the below lines to your tiapp.xml:
+
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+<application>
+  <receiver android:name="mve.android.notify.MveAlarmReceiver" />
+</application>
+```
+
+See also the tiapp.xml of the example app.
+
 ## Code examples
 
 ### Require module
