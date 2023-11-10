@@ -1,101 +1,88 @@
-# TiDev Titanium Mobile Module Project
+# Titanium Android Local Notification module
 
-This is a skeleton Titanium Mobile Mobile module project.
+A Titanium Android module that can be used to schedule local notifications. See the example project for a full implementation.
 
-## Module Naming
+## Concepts
 
-Choose a unique module id for your module.  This ID usually follows a namespace
-convention using DNS notation.  For example, com.appcelerator.module.test.  This
-ID can only be used once by all public modules in Titanium.
+- First create a notification channel. This should be called asap, for example immediately after requiring the module. It can be called multiple times without problems.
+- Make sure to ask for the `POST_NOTIFICATIONS` permission before scheduling notifications.
+- This module is using Android alarms to schedule the notifications. Android alarms are by default _inexact_, which means they won't fire exactly on time. If you want your notifications to be scheduled _exactly_ on time, make sure to request for `REQUEST_SCHEDULE_EXACT_ALARM` permission.
+- Each notification can be scheduled once or in a repeated interval.
+- Each notification has a `requestCode` - this is a number and works as an ID for the notification. This must be used to cancel a notification.
 
-## Getting Started
+## Code examples
 
-1. Edit the `manifest` with the appropriate details about your module.
-2. Edit the `LICENSE` to add your license details.
-3. Place any assets (such as PNG files) that are required anywhere in the module folder.
-4. Edit the `timodule.xml` and configure desired settings.
-5. Code and build.
-
-## Documentation
------------------------------
-
-You should provide at least minimal documentation for your module in `documentation` folder using the Markdown syntax.
-
-For more information on the Markdown syntax, refer to this documentation at:
-
-<http://daringfireball.net/projects/markdown/>
-
-## Example
-
-The `example` directory contains a skeleton application test harness that can be
-used for testing and providing an example of usage to the users of your module.
-
-## Building
-
-Simply run `ti build -p [ios|android] --build-only` which will compile and package your module.
-
-## Linting
-
-You can use `clang` to lint your code. A default linting style is included inside the module main folder.
-Run `clang-format -style=file -i SRC_FILE` in the module root to lint the `SRC_FILE`. You can also patterns,
-like `clang-format -style=file -i Classes/*`
-
-## Install
-
-To use your module locally inside an app you can copy the zip file into the app root folder and compile your app.
-The file will automatically be extracted and copied into the correct `modules/` folder.
-
-If you want to use your module globally in all your apps you have to do the following:
-
-### macOS
-
-Copy the distribution zip file into the `~/Library/Application Support/Titanium` folder
-
-### Linux
-
-Copy the distribution zip file into the `~/.titanium` folder
-
-### Windows
-Copy the distribution zip file into the `C:\ProgramData\Titanium` folder
-
-## Project Usage
-
-Register your module with your application by editing `tiapp.xml` and adding your module.
-Example:
-
-<modules>
-  <module version="1.0.0">mve.android.notify</module>
-</modules>
-
-When you run your project, the compiler will combine your module along with its dependencies
-and assets into the application.
-
-## Example Usage
-
-To use your module in code, you will need to require it.
-
-### ES6+ (recommended)
+### Require module
 
 ```js
-import MyModule from 'mve.android.notify';
-MyModule.foo();
+var notify = require('mve.android.notify');
 ```
 
-### ES5
+### Create notification channel
+
+This is always needed and should be done asap.
 
 ```js
-var MyModule = require('mve.android.notify');
-MyModule.foo();
+notify.createChannel();
 ```
 
-## Testing
+### Ask for POST_NOTIFICATIONS permission
 
-To test your module with the example, use:
+This is always needed.
 
 ```js
-ti build -p [ios|android]
+Ti.Android.requestPermissions(['android.permission.POST_NOTIFICATIONS'], function (e) {
+  if (e.success) {
+    // We have POST_NOTIFICATIONS permission
+  }
+});
 ```
 
-This will execute the app.js in the example/ folder as a Titanium application.
+### Ask for REQUEST_SCHEDULE_EXACT_ALARM permission
 
-Code strong!
+This is only needed if you want to schedule _exact_ notifications.
+
+```js
+var intent = Ti.Android.createIntent({
+  action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+  data: 'package:' + Ti.App.id
+});
+Ti.Android.currentActivity.startActivityForResult(intent, function (e) {
+  if (notify.canScheduleExactAlarms()) {
+    // We have REQUEST_SCHEDULE_EXACT_ALARM permission
+  }
+});
+```
+
+### Schedule notification
+
+Example of notification that should be displayed each day exactly on 08:30h.
+
+```js
+notify.schedule({
+  requestCode: 1,
+  content: 'This is the content of the notification',
+  title: 'The title',
+  icon: 'ic_stat_capsules_solid',
+  interval: 'day',
+  exact: true,
+  hour: 8,
+  minute: 30
+});
+```
+
+### Cancel notification
+
+Use the `requestCode` that you used to schedule the notification.
+
+```js
+notify.cancel(1);
+```
+
+## See scheduled notifications
+
+You can use the below `adb` command to see a dump of scheduled notifications (alarms) for the attached Android device or emulator:
+
+`adb shell dumpsys alarm > alarms.txt`
+
+Then search for your app ID to see the alarms for your app.
