@@ -22,15 +22,15 @@ class MveAlarmReceiver : BroadcastReceiver() {
         Utils.log("Alarm received")
 
         if (intent == null) {
-            Utils.log("No intent in alarm, so we cannot display a notification")
+            Utils.log("Cannot display notification because intent is missing in the receiver")
             return;
         }
 
-        val requestCode = intent.getIntExtra(MveAndroidNotifyModule.NOTIFICATION_REQUEST_CODE, 0)
-        val content = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_CONTENT)
-        val title = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_TITLE)
-        val icon = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_ICON)
-        val isExact = intent.getBooleanExtra(MveAndroidNotifyModule.NOTIFICATION_EXACT, false)
+        val requestCode = intent.getIntExtra(MveAndroidNotifyModule.REQUEST_CODE, 0)
+        val content = intent.getStringExtra(MveAndroidNotifyModule.CONTENT)
+        val title = intent.getStringExtra(MveAndroidNotifyModule.TITLE)
+        val icon = intent.getStringExtra(MveAndroidNotifyModule.ICON)
+        val isExact = intent.getBooleanExtra(MveAndroidNotifyModule.EXACT, false)
 
         val builder = NotificationCompat.Builder(TiApplication.getInstance().applicationContext, channelId)
             .setSmallIcon(TiRHelper.getApplicationResource("drawable.$icon"))
@@ -47,16 +47,16 @@ class MveAlarmReceiver : BroadcastReceiver() {
             NotificationManagerCompat.from(TiApplication.getInstance()).notify(requestCode, builder.build())
             Utils.log("Notification displayed")
         } else {
-            Utils.log("We have no permission to display a notification")
+            Utils.log("Missing 'POST_NOTIFICATIONS' permission to display a notification")
         }
 
         if (isExact) {
-            val interval = intent.getStringExtra(MveAndroidNotifyModule.NOTIFICATION_INTERVAL);
-            if (interval != MveAndroidNotifyModule.NOTIFICATION_INTERVAL_ONCE) {
+            val interval = intent.getStringExtra(MveAndroidNotifyModule.INTERVAL);
+            if (interval != MveAndroidNotifyModule.INTERVAL_ONCE) {
                 // setRepeating doesn't work exact, you have to schedule one exact with setExact() and then reschedule the next one in the alarm receiver.
                 // https://stackoverflow.com/a/59473739/1294832
-                val hour = intent.getIntExtra(MveAndroidNotifyModule.NOTIFICATION_HOUR, 0)
-                val minute = intent.getIntExtra(MveAndroidNotifyModule.NOTIFICATION_MINUTE, 0)
+                val hour = intent.getIntExtra(MveAndroidNotifyModule.HOUR, 0)
+                val minute = intent.getIntExtra(MveAndroidNotifyModule.MINUTE, 0)
                 MveAndroidNotifyModule.scheduleNotification(requestCode, content!!, title!!, icon!!, interval!!, true, hour, minute, true)
             }
         }

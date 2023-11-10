@@ -38,21 +38,44 @@ class MveAndroidNotifyModule: KrollModule() {
 
 	companion object {
 
-		const val NOTIFICATION_REQUEST_CODE = "requestCode"
-		const val NOTIFICATION_CONTENT = "content"
-		const val NOTIFICATION_TITLE = "title"
-		const val NOTIFICATION_ICON = "icon"
-		const val NOTIFICATION_HOUR = "hour"
-		const val NOTIFICATION_MINUTE = "minute"
-		const val NOTIFICATION_INTERVAL = "interval"
-		const val NOTIFICATION_INTERVAL_ONCE = "once"
-		private const val NOTIFICATION_INTERVAL_FIFTEEN_MINUTES = "15_min"
-		private const val NOTIFICATION_INTERVAL_HALF_HOUR = "half_hour"
-		private const val NOTIFICATION_INTERVAL_HOUR = "hour"
-		private const val NOTIFICATION_INTERVAL_DAY = "day"
-		private const val NOTIFICATION_INTERVAL_WEEK = "week"
-		private const val NOTIFICATION_INTERVAL_4_WEEK = "4_week"
-		private const val NOTIFICATION_EXACT = "exact"
+		@Kroll.constant
+		const val REQUEST_CODE = "requestCode"
+
+		@Kroll.constant
+		const val CONTENT = "content"
+
+		@Kroll.constant
+		const val TITLE = "title"
+
+		@Kroll.constant
+		const val ICON = "icon"
+
+		@Kroll.constant
+		const val HOUR = "hour"
+
+		@Kroll.constant
+		const val MINUTE = "minute"
+
+		@Kroll.constant
+		const val INTERVAL = "interval"
+
+		@Kroll.constant
+		const val INTERVAL_ONCE = "once"
+
+		@Kroll.constant
+		const val INTERVAL_HOUR = "hour"
+
+		@Kroll.constant
+		const val INTERVAL_DAY = "day"
+
+		@Kroll.constant
+		const val INTERVAL_WEEK = "week"
+
+		@Kroll.constant
+		const val INTERVAL_4_WEEK = "4_week"
+
+		@Kroll.constant
+		const val EXACT = "exact"
 
 		@Kroll.onAppCreate
 		fun onAppCreate(app: TiApplication?) {
@@ -75,12 +98,10 @@ class MveAndroidNotifyModule: KrollModule() {
 
 		private fun intervalToMs(interval: String): Long {
 			return when (interval) {
-				NOTIFICATION_INTERVAL_FIFTEEN_MINUTES -> AlarmManager.INTERVAL_FIFTEEN_MINUTES
-				NOTIFICATION_INTERVAL_HALF_HOUR -> AlarmManager.INTERVAL_HALF_HOUR
-				NOTIFICATION_INTERVAL_HOUR -> AlarmManager.INTERVAL_HOUR
-				NOTIFICATION_INTERVAL_DAY -> AlarmManager.INTERVAL_DAY
-				NOTIFICATION_INTERVAL_WEEK -> AlarmManager.INTERVAL_DAY * 7
-				NOTIFICATION_INTERVAL_4_WEEK -> AlarmManager.INTERVAL_DAY * 28
+				INTERVAL_HOUR -> AlarmManager.INTERVAL_HOUR
+				INTERVAL_DAY -> AlarmManager.INTERVAL_DAY
+				INTERVAL_WEEK -> AlarmManager.INTERVAL_DAY * 7
+				INTERVAL_4_WEEK -> AlarmManager.INTERVAL_DAY * 28
 				else -> 0L
 			}
 		}
@@ -90,34 +111,31 @@ class MveAndroidNotifyModule: KrollModule() {
 			val context = getContext()
 
 			var infoIntent = getReceiverIntent();
-			infoIntent.putExtra(NOTIFICATION_REQUEST_CODE, requestCode)
-			infoIntent.putExtra(NOTIFICATION_CONTENT, content)
-			infoIntent.putExtra(NOTIFICATION_TITLE, title)
-			infoIntent.putExtra(NOTIFICATION_ICON, icon)
-			infoIntent.putExtra(NOTIFICATION_INTERVAL, interval)
-			infoIntent.putExtra(NOTIFICATION_EXACT, isExact)
-			infoIntent.putExtra(NOTIFICATION_HOUR, hour)
-			infoIntent.putExtra(NOTIFICATION_MINUTE, minute)
+			infoIntent.putExtra(REQUEST_CODE, requestCode)
+			infoIntent.putExtra(CONTENT, content)
+			infoIntent.putExtra(TITLE, title)
+			infoIntent.putExtra(ICON, icon)
+			infoIntent.putExtra(INTERVAL, interval)
+			infoIntent.putExtra(EXACT, isExact)
+			infoIntent.putExtra(HOUR, hour)
+			infoIntent.putExtra(MINUTE, minute)
 
 			var calendar = Calendar.getInstance().apply {
 				timeInMillis = System.currentTimeMillis()
+				set(Calendar.HOUR_OF_DAY, hour)
+				set(Calendar.MINUTE, minute)
+				set(Calendar.SECOND, 0)
 			};
 
 			val intervalInMs = intervalToMs(interval)
 
-			if (!fromReceiver) {
-				// The first time we schedule this, so set hour and minute
-				calendar.set(Calendar.HOUR_OF_DAY, hour)
-				calendar.set(Calendar.MINUTE, minute)
-			} else {
-				// From receiver, so we are rescheduling an exact repeating notification, so add the interval to this time
+			if (fromReceiver) {
+				// We are rescheduling an exact repeating notification
 				when (interval) {
-					NOTIFICATION_INTERVAL_FIFTEEN_MINUTES -> calendar.add(Calendar.MINUTE, 15)
-					NOTIFICATION_INTERVAL_HALF_HOUR -> calendar.add(Calendar.MINUTE, 30)
-					NOTIFICATION_INTERVAL_HOUR -> calendar.add(Calendar.MINUTE, 60)
-					NOTIFICATION_INTERVAL_DAY -> calendar.add(Calendar.DAY_OF_MONTH, 1)
-					NOTIFICATION_INTERVAL_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 7)
-					NOTIFICATION_INTERVAL_4_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 28)
+					INTERVAL_HOUR -> calendar.set(Calendar.HOUR_OF_DAY, calendar.get(Calendar.HOUR_OF_DAY) + 1)
+					INTERVAL_DAY -> calendar.add(Calendar.DAY_OF_MONTH, 1)
+					INTERVAL_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 7)
+					INTERVAL_4_WEEK -> calendar.add(Calendar.DAY_OF_MONTH, 28)
 				}
 			}
 
@@ -129,7 +147,7 @@ class MveAndroidNotifyModule: KrollModule() {
 				// https://stackoverflow.com/a/59473739/1294832
 				alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
 			} else {
-				if (interval == NOTIFICATION_INTERVAL_ONCE) {
+				if (interval == INTERVAL_ONCE) {
 					alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
 				} else {
 					alarmManager.setInexactRepeating(
@@ -141,7 +159,7 @@ class MveAndroidNotifyModule: KrollModule() {
 				}
 			}
 
-			Utils.log("Scheduled $interval " + (if(isExact) " exact " else " inexact ") + " notification with id $requestCode starting on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.time)}")
+			Utils.log("Scheduled $interval " + (if(isExact) "exact" else "inexact") + " notification #$requestCode starting on ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(calendar.time)}")
 		}
 	}
 
@@ -167,14 +185,14 @@ class MveAndroidNotifyModule: KrollModule() {
 	fun schedule(arg: KrollDict) {
 
 		// From KrollDict to properties
-		val requestCode = arg.getInt(NOTIFICATION_REQUEST_CODE)
-		val title = arg.getString(NOTIFICATION_TITLE)
-		val content = arg.getString(NOTIFICATION_CONTENT)
-		val icon = arg.getString(NOTIFICATION_ICON)
-		val hour = arg.getInt(NOTIFICATION_HOUR)
-		val minute = arg.getInt(NOTIFICATION_MINUTE)
-		val interval = if (arg.containsKeyAndNotNull(NOTIFICATION_INTERVAL)) arg.getString(NOTIFICATION_INTERVAL) else NOTIFICATION_INTERVAL_ONCE
-		val isExact = arg.getBoolean(NOTIFICATION_EXACT)
+		val requestCode = arg.getInt(REQUEST_CODE)
+		val title = arg.getString(TITLE)
+		val content = arg.getString(CONTENT)
+		val icon = arg.getString(ICON)
+		val hour = arg.getInt(HOUR)
+		val minute = arg.getInt(MINUTE)
+		val interval = if (arg.containsKeyAndNotNull(INTERVAL)) arg.getString(INTERVAL) else INTERVAL_ONCE
+		val isExact = arg.getBoolean(EXACT)
 
 		scheduleNotification(requestCode, content, title, icon, interval, isExact, hour, minute, false)
 
