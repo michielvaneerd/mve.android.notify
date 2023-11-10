@@ -1,6 +1,7 @@
 package mve.android.notify
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -15,6 +16,7 @@ import org.appcelerator.titanium.util.TiRHelper
 
 class MveAlarmReceiver : BroadcastReceiver() {
 
+    @SuppressLint("MissingPermission")
     override fun onReceive(context: Context?, intent: Intent?) {
 
         Utils.log("Alarm received")
