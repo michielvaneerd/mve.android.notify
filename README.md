@@ -71,6 +71,8 @@ notify.schedule({
 });
 ```
 
+__Note that the `icon` should be a PNG file that is located in: `app/platform/android/res/drawable` and that the extension `.png` should be omitted.__
+
 ### Cancel notification
 
 Use the `requestCode` that you used to schedule the notification.
