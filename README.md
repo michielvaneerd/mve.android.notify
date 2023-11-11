@@ -52,21 +52,33 @@ Ti.Android.requestPermissions(['android.permission.POST_NOTIFICATIONS'], functio
 });
 ```
 
-### Ask for REQUEST_SCHEDULE_EXACT_ALARM permission
+The user will see the below screen:
 
-This is only needed if you want to schedule _exact_ notifications.
+![Asking for the POST_NOTIFICATIONS permission](./POST_NOTIFICATIONS_framed.png)
+
+### Make a REQUEST_SCHEDULE_EXACT_ALARM request to ask for SCHEDULE_EXACT_ALARM permission
+
+This is only needed if you want to schedule _exact_ notifications. Make also sure to add the `SCHEDULE_EXACT_ALARM` permission to your tipp.xml as can be seen above and in the example app.
+
+Note that this is only needed when the user doesn't have this permission yet, so always first check if we already have this permission.
 
 ```js
-var intent = Ti.Android.createIntent({
-  action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
-  data: 'package:' + Ti.App.id
-});
-Ti.Android.currentActivity.startActivityForResult(intent, function (e) {
-  if (notify.canScheduleExactAlarms()) {
-    // We have REQUEST_SCHEDULE_EXACT_ALARM permission
-  }
-});
+if (!notify.canScheduleExactAlarms()) {
+  var intent = Ti.Android.createIntent({
+    action: 'android.settings.REQUEST_SCHEDULE_EXACT_ALARM',
+    data: 'package:' + Ti.App.id
+  });
+  Ti.Android.currentActivity.startActivityForResult(intent, function (e) {
+    if (notify.canScheduleExactAlarms()) {
+      // We have REQUEST_SCHEDULE_EXACT_ALARM permission
+    }
+  });
+}
 ```
+
+The user will get sent to the following screen:
+
+![Asking for the REQUEST_SCHEDULE_EXACT_ALARM permission](./REQUEST_SCHEDULE_EXACT_ALARM_framed.png)
 
 ### Schedule notification
 
